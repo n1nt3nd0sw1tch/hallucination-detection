@@ -1,0 +1,164 @@
+# Every setting the pipeline reads, in one file. Nothing is configured by
+# editing a script, and nothing is configured by commenting a block in and out.
+# A run is described entirely by this file plus the command that started it.
+
+# ----------------------------------------------------------------------------
+# Generation
+# ----------------------------------------------------------------------------
+
+generation:
+  # Sampling is stochastic rather than fixed seed, so that repeated calls to the
+  # same prompt differ by sampling alone. Three replicates then separate
+  # variation due to resampling from variation due to the method or the
+  # language, and the share of items where all three agree is a stability
+  # measure in its own right.
+  temperature: 1.0
+  top_p: 1.0
+  replicates: 3
+  # A binary label needs very few tokens; a span list or a reasoning chain needs
+  # room. Set per method below, with this as the fallback.
+  max_tokens: 512
+
+# ----------------------------------------------------------------------------
+# The panel
+# ----------------------------------------------------------------------------
+
+# access decides how a model is reached: local through a runtime on this
+# machine, or api over http. weights records whether the checkpoint is public,
+# which is a property of the model rather than of how it was run.
+models:
+  llama:
+    runtime: mlx
+    id: mlx-community/Meta-Llama-3-8B-Instruct-4bit
+    access: local
+    weights: open
+    precision: 4-bit
+
+  qwen:
+    runtime: mlx
+    id: mlx-community/Qwen2.5-7B-Instruct-4bit
+    access: local
+    weights: open
+    precision: 4-bit
+
+  deepseek:
+    runtime: api
+    id: deepseek-v4-flash
+    access: api
+    weights: open
+    precision: full
+    url: https://api.deepseek.com/chat/completions
+    key: DEEPSEEK_API_KEY
+    # Thinking is on by default at effort high, and in that mode the api
+    # documents that temperature and top_p are accepted without error and have
+    # no effect. Declared so that the request stops claiming a decoding the
+    # model does not apply.
+    sampling: provider
+    # A cap covers reasoning and answer together, so a model that thinks before
+    # replying needs this much on top of whatever the method allows. Without it
+    # a 48 token baseline cap is spent thinking and the reply comes back empty.
+    # The method's cap still governs the answer, so the answer budget stays
+    # comparable across the panel and only the deliberation differs.
+    reasoning_headroom: 640
+
+# The classifier that decides whether an output is a refusal rather than a
+# judgement. A refusal is not a wrong answer, it is an absent one, and counting
+# it as wrong would understate a model that declines rather than guesses.
+refusal:
+  id: NousResearch/Minos-v1
+  runtime: transformers
+  # Below this score the sequence classifier is not trusted and the regular
+  # expressions decide instead.
+  threshold: 0.5
+
+# ----------------------------------------------------------------------------
+# The dataset
+# ----------------------------------------------------------------------------
+
+dataset:
+  name: HalOmi
+  file: halomi_core.tsv
+  # How many items to take from each direction. The full set is about 155 an
+  # direction, which across five methods and three replicates is more than fifty
+  # thousand calls a model, or days on a laptop runtime. Sampling is stratified
+  # by label so the balance of each direction is preserved, and the seed is
+  # fixed so the same subset is drawn every time. Set to 0 to take everything.
+  items_per_direction: 40
+  sample_seed: 20260816
+  # class_hall carries four grades. The task is binary, so anything above no
+  # hallucination counts as one, and the grade is kept alongside for the
+  # severity breakdown.
+  positive_grades:
+    - 2_Small_hallucination
+    - 3_Partial_hallucination
+    - 4_Full_hallucination
+  negative_grade: 1_No_hallucination
+
+# Which translation directions to run. Named rather than listed as raw codes, so
+# that a figure axis and a results table can both read the short name. Comment a
+# language out to drop both its directions, or set directions: all below.
+languages:
+  arb_Arab: Arabic
+  deu_Latn: German
+  spa_Latn: Spanish
+  rus_Cyrl: Russian
+  zho_Hans: Chinese
+  yor_Latn: Yoruba
+  mni_Beng: Manipuri
+  kas_Deva: Kashmiri
+
+# Pairs are formed against English in both directions unless a pair is named
+# here. The two non-English pairs in HalOmi are kept because they are the only
+# ones that test a judge with no English anchor at all.
+extra_pairs:
+  - [spa_Latn, yor_Latn]
+  - [yor_Latn, spa_Latn]
+
+# ----------------------------------------------------------------------------
+# The methods
+# ----------------------------------------------------------------------------
+
+# Each method is one way of asking the same question, so they share a prompt
+# builder and differ only in what the builder is told. max_tokens is set per
+# method because a binary label and a reasoning chain need very different room,
+# and a cap that suits one truncates the other.
+methods:
+  baseline:
+    name: Zero Shot Binary
+    max_tokens: 48
+    shots: 0
+
+  fewshot:
+    name: Few Shot
+    max_tokens: 48
+    # Run at each of these, so the effect of adding examples is measured rather
+    # than assumed.
+    shots: [1, 2, 3]
+
+  translate:
+    name: Chain of Translation
+    max_tokens: 384
+    shots: 0
+
+  span:
+    name: Span Level Chain of Thought
+    max_tokens: 512
+    shots: 0
+
+  debate:
+    name: Multi Agent Review
+    max_tokens: 384
+    shots: 0
+    # Each model judges, then reviews the other's judgement. Listed rather than
+    # inferred from the panel, so that adding a third model does not silently
+    # change what debate means.
+    reviewers: [llama, qwen]
+
+# ----------------------------------------------------------------------------
+# Paths
+# ----------------------------------------------------------------------------
+
+paths:
+  data: data
+  results: results
+  figures: figures

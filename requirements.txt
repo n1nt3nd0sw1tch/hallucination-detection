@@ -1,0 +1,15 @@
+# Pinned so that a rerun on another machine produces the same files.
+pandas==2.2.3
+pyyaml==6.0.2
+scikit-learn==1.6.1
+matplotlib==3.10.0
+
+# Local inference. Only the runtime a given machine uses is needed: mlx-lm on
+# Apple silicon, vllm on a GPU node, transformers anywhere.
+mlx-lm==0.21.1
+# vllm==0.7.2
+transformers==4.48.0
+torch==2.6.0
+
+# Notebooks
+jupyter==1.1.1

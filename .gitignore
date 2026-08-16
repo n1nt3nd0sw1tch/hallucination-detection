@@ -1,0 +1,69 @@
+# Keys
+.env
+.env.*
+*.key
+*.token
+.hf_token
+secrets/
+
+# Python
+**pycache**/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+.conda/
+
+# System and editors
+.DS_Store
+.vscode/
+.idea/
+
+# Downloaded datasets
+data/original/
+examples/
+archive/
+
+
+# Model outputs
+results/responses/
+results/raw/
+results/**/*.jsonl
+results/**/*_responses.csv
+results/**/*_traces.csv
+
+# Jobs and logs
+jobs/*.o[0-9]*
+jobs/*.e[0-9]*
+jobs/*.po[0-9]*
+jobs/*.pe[0-9]*
+*.log
+
+# Models
+models/
+*.safetensors
+*.gguf
+*.bin
+*.pt
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.run.xml
+*.bcf
